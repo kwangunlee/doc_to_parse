@@ -9,12 +9,14 @@
 - difflib 기반 문자 유사도, 표 구조 점검은 API 없이도 계산되는 보조 지표
 """
 import io
+import re
 import json
 import base64
 import difflib
 import unicodedata
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from bs4 import BeautifulSoup
 
@@ -44,6 +46,35 @@ def ext(name: str) -> str:
 
 def nfc(s: str) -> str:
     return unicodedata.normalize("NFC", s or "")
+
+
+def smart_decode(data: bytes) -> str:
+    """한글 문서 인코딩 자동 감지(UTF-8 / CP949 / EUC-KR 등). UTF-8 강제 디코딩으로 깨지는 문제 방지."""
+    if data.startswith(b"\xef\xbb\xbf"):        # UTF-8 BOM
+        return data[3:].decode("utf-8", "replace")
+    # <meta charset=...> 선언 탐지
+    head = data[:2048].decode("latin-1", "ignore").lower()
+    m = re.search(r'charset\s*=\s*["\']?\s*([a-z0-9_\-]+)', head)
+    aliases = {"ms949": "cp949", "euckr": "euc-kr", "ksc5601": "euc-kr",
+               "ks_c_5601-1987": "euc-kr", "x-windows-949": "cp949"}
+    candidates = []
+    if m:
+        enc = m.group(1)
+        candidates.append(aliases.get(enc, enc))
+    candidates += ["utf-8", "cp949", "euc-kr"]     # UTF-8 우선, 실패 시 한글 레거시
+    for enc in candidates:
+        try:
+            return data.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    try:                                            # 마지막: 통계 기반 감지
+        from charset_normalizer import from_bytes
+        best = from_bytes(data).best()
+        if best:
+            return str(best)
+    except Exception:
+        pass
+    return data.decode("utf-8", "replace")
 
 
 # ------------------------------------------------------------------ #
@@ -272,7 +303,7 @@ if run:
 
     for i, (pname, oname) in enumerate(pairs):
         progress.progress(i / total, text=f"검증 중… {pname}")
-        phtml = parsed[pname].decode("utf-8", errors="replace")
+        phtml = smart_decode(parsed[pname])
         ref_text, images, preview_pngs = "", [], []
         if oname:
             odata = origins[oname]
@@ -282,7 +313,7 @@ if run:
                 if use_vision:
                     images = pdf_images(odata)
             else:
-                ref_text = odata.decode("utf-8", errors="replace")
+                ref_text = smart_decode(odata)
 
         sim = char_similarity(ref_text, html_text(phtml)) if ref_text else None
         tables = analyze_tables(phtml)
@@ -335,7 +366,7 @@ if run:
                     st.info("원본 파일이 없습니다.")
             with c2:
                 st.caption("파싱 결과 렌더")
-                st.markdown(phtml, unsafe_allow_html=True)
+                components.html(phtml, height=600, scrolling=True)
 
         rows.append({
             "파싱파일": pname,
