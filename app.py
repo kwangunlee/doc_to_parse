@@ -351,11 +351,12 @@ if run:
                         "type": "유형", "original": "원본", "parsed": "파싱결과", "note": "설명"
                     })
                     st.markdown("""<style>
-                    table.qa td,table.qa th{white-space:normal;word-break:break-word;vertical-align:top;padding:6px 8px;font-size:13px;border:1px solid #e4e8ee}
                     table.qa{border-collapse:collapse;width:100%;table-layout:fixed}
-                    table.qa td:nth-child(1){width:4%}
-                    table.qa td:nth-child(2),table.qa td:nth-child(3){width:40%}
-                    table.qa td:nth-child(4){width:16%}
+                    table.qa th,table.qa td{white-space:normal;word-break:break-word;vertical-align:top;padding:6px 8px;font-size:13px;border:1px solid #e4e8ee;text-align:left}
+                    table.qa th:nth-child(1),table.qa td:nth-child(1){width:5%}
+                    table.qa th:nth-child(2),table.qa td:nth-child(2){width:38%}
+                    table.qa th:nth-child(3),table.qa td:nth-child(3){width:38%}
+                    table.qa th:nth-child(4),table.qa td:nth-child(4){width:19%}
                     </style>""", unsafe_allow_html=True)
                     st.markdown(df.to_html(index=False, classes="qa", escape=True), unsafe_allow_html=True)
                 else:
