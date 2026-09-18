@@ -346,14 +346,18 @@ if run:
                 errs = judged.get("errors", [])
                 if errs:
                     df = pd.DataFrame(errs)
-                    order = [c for c in ["type", "severity", "original", "parsed", "note"] if c in df.columns]
+                    order = [c for c in ["type", "original", "parsed", "note"] if c in df.columns]
+                    df = df[order].rename(columns={
+                        "type": "유형", "original": "원본", "parsed": "파싱결과", "note": "설명"
+                    })
                     st.markdown("""<style>
                     table.qa td,table.qa th{white-space:normal;word-break:break-word;vertical-align:top;padding:6px 8px;font-size:13px;border:1px solid #e4e8ee}
                     table.qa{border-collapse:collapse;width:100%;table-layout:fixed}
-                    table.qa td:nth-child(1),table.qa td:nth-child(2){width:7%}
-                    table.qa td:nth-child(3),table.qa td:nth-child(4){width:33%}
+                    table.qa td:nth-child(1){width:6%}
+                    table.qa td:nth-child(2),table.qa td:nth-child(3){width:37%}
+                    table.qa td:nth-child(4){width:20%}
                     </style>""", unsafe_allow_html=True)
-                    st.markdown(df[order].to_html(index=False, classes="qa", escape=True), unsafe_allow_html=True)
+                    st.markdown(df.to_html(index=False, classes="qa", escape=True), unsafe_allow_html=True)
                 else:
                     st.success("LLM이 보고한 오류 없음.")
 
