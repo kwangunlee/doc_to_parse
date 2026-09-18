@@ -359,8 +359,21 @@ if run:
             with c1:
                 st.caption("원본 (PDF 그대로 보기)")
                 if preview_pngs:
-                    for png in preview_pngs:
-                        st.image(png, use_container_width=True)
+                    imgs = "".join(
+                        f'<img src="data:image/png;base64,{base64.b64encode(p).decode()}" '
+                        f'style="width:100%;display:block;margin:0 auto 8px">'
+                        for p in preview_pngs
+                    )
+                    components.html(f"""
+                      <label style="font:13px sans-serif">확대/축소
+                        <input type="range" min="50" max="300" value="100"
+                          oninput="pg.style.width=this.value+'%';zl.textContent=this.value+'%'">
+                        <span id="zl">100%</span>
+                      </label>
+                      <div style="overflow:auto;max-height:640px;border:1px solid #ddd;padding:6px">
+                        <div id="pg" style="width:100%">{imgs}</div>
+                      </div>
+                    """, height=720, scrolling=True)
                 elif oname:
                     st.text_area("ref", ref_text or "(없음)", height=220,
                                  key=f"ref_{pname}", label_visibility="collapsed")
