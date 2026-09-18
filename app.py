@@ -59,18 +59,23 @@ def pdf_text(data: bytes) -> str:
     return "\n".join(out)
 
 
-def pdf_images(data: bytes, max_pages: int = 2, dpi: int = 140):
-    """LLM 비전 판정용 페이지 이미지(base64 PNG) 목록"""
-    imgs = []
+def pdf_page_pngs(data: bytes, max_pages: int = 10, dpi: int = 140):
+    """PDF 페이지를 PNG 바이트 목록으로 렌더링"""
+    out = []
     if not HAS_FITZ:
-        return imgs
+        return out
     with fitz.open(stream=data, filetype="pdf") as doc:
         for i, page in enumerate(doc):
             if i >= max_pages:
                 break
             pix = page.get_pixmap(dpi=dpi)
-            imgs.append(base64.b64encode(pix.tobytes("png")).decode())
-    return imgs
+            out.append(pix.tobytes("png"))
+    return out
+
+
+def pdf_images(data: bytes, max_pages: int = 2, dpi: int = 140):
+    """LLM 비전 판정용 페이지 이미지(base64 PNG) 목록"""
+    return [base64.b64encode(p).decode() for p in pdf_page_pngs(data, max_pages, dpi)]
 
 
 def html_text(html: str) -> str:
@@ -268,11 +273,12 @@ if run:
     for i, (pname, oname) in enumerate(pairs):
         progress.progress(i / total, text=f"검증 중… {pname}")
         phtml = parsed[pname].decode("utf-8", errors="replace")
-        ref_text, images = "", []
+        ref_text, images, preview_pngs = "", [], []
         if oname:
             odata = origins[oname]
             if ext(oname) == "pdf":
                 ref_text = pdf_text(odata)
+                preview_pngs = pdf_page_pngs(odata, max_pages=10, dpi=130)
                 if use_vision:
                     images = pdf_images(odata)
             else:
@@ -318,9 +324,15 @@ if run:
 
             c1, c2 = st.columns(2)
             with c1:
-                st.caption("원본 텍스트")
-                st.text_area("ref", ref_text or "(없음)", height=220,
-                             key=f"ref_{pname}", label_visibility="collapsed")
+                st.caption("원본 (PDF 그대로 보기)")
+                if preview_pngs:
+                    for png in preview_pngs:
+                        st.image(png, use_container_width=True)
+                elif oname:
+                    st.text_area("ref", ref_text or "(없음)", height=220,
+                                 key=f"ref_{pname}", label_visibility="collapsed")
+                else:
+                    st.info("원본 파일이 없습니다.")
             with c2:
                 st.caption("파싱 결과 렌더")
                 st.markdown(phtml, unsafe_allow_html=True)
