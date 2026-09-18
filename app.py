@@ -222,9 +222,11 @@ def llm_judge(client, model, ref_text, parsed_html, images, max_err, use_vision,
 # ------------------------------------------------------------------ #
 with st.sidebar:
     st.header("설정")
-    default_key = st.secrets.get("OPENAI_API_KEY", "") if hasattr(st, "secrets") else ""
-    api_key = st.text_input("OpenAI API Key", value=default_key, type="password",
-                            help="Streamlit Cloud에서는 Settings → Secrets에 OPENAI_API_KEY로 저장하면 자동 입력됩니다.")
+    secret_key = st.secrets.get("OPENAI_API_KEY", "") if hasattr(st, "secrets") else ""
+    user_key = st.text_input("OpenAI API Key", value="", type="password",
+                             placeholder="비워두면 서버에 저장된 키 사용",
+                             help="여기 입력한 키는 이 세션에서만 쓰이고 저장/노출되지 않습니다.")
+    api_key = user_key or secret_key
     model = st.selectbox("모델", ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"], index=0)
     use_vision = st.toggle("비전 판정(원본 이미지 사용)", value=True,
                            help="PDF 페이지를 이미지로 렌더링해 표 레이아웃까지 비교합니다. 끄면 추출 텍스트로만 비교(더 저렴).")
